@@ -216,7 +216,8 @@ Arg reader::row::get(size_t index)
 {
     assert(index < m_column_offsets.size());
     Arg val;
-    m_column_offsets[index] >> val;
+    m_line_stream.seekg(m_column_offsets[index]);
+    m_line_stream >> val;
     return val;
 }
 
