@@ -22,7 +22,6 @@
  * SOFTWARE.
  */
 #include "csv_reader.h"
-#include <numeric>
 #include <string>
 
 namespace csv
@@ -62,7 +61,8 @@ void reader::row::parse_line(std::string line, char delimiter)
 }
 
 reader::reader()
-    : m_delimiter(',')
+    : m_delimiter(','),
+      m_selected_cols_num(0)
 {
 }
 
@@ -106,6 +106,7 @@ bool reader::select_cols(const std::vector<std::string>& selected_cols)
         std::fill(m_selected_cols.begin(), m_selected_cols.end(), true);
     }
 
+    m_selected_cols_num = std::accumulate(m_selected_cols.begin(), m_selected_cols.end(), size_t(0));
     return cols_selected;
 }
 
@@ -130,6 +131,7 @@ bool reader::select_cols(const std::vector<size_t>& selected_cols)
         }
     }
 
+    m_selected_cols_num = std::accumulate(m_selected_cols.begin(), m_selected_cols.end(), size_t(0));
     return indexes_in_range;
 }
 
@@ -146,6 +148,7 @@ bool reader::select_cols(std::vector<bool> selected_cols)
     }
 
     m_selected_cols = std::move(selected_cols);
+    m_selected_cols_num = std::accumulate(m_selected_cols.begin(), m_selected_cols.end(), size_t(0));
     return true;
 }
 
@@ -164,6 +167,7 @@ bool reader::read_header()
 
         m_selected_cols.resize(num_cols);
         std::fill(m_selected_cols.begin(), m_selected_cols.end(), true);
+        m_selected_cols_num = m_selected_cols.size();
         return true;
     }
 

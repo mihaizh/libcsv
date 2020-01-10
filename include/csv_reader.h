@@ -25,6 +25,7 @@
 #define CSV_READER_H
 
 #include <algorithm>
+#include <numeric>
 #include <fstream>
 #include <vector>
 #include <memory>
@@ -145,6 +146,7 @@ private:
     std::ifstream m_filestream;
     char m_delimiter;
 
+    size_t m_selected_cols_num;
     std::vector<bool> m_selected_cols;
     std::vector<std::string> m_column_names;
 
@@ -221,7 +223,7 @@ Arg reader::row::get(size_t index)
 template <typename... Args>
 bool reader::read_row(Args&... args)
 {
-    if (sizeof...(args) != m_selected_cols.size())
+    if (sizeof...(args) != m_selected_cols_num)
     {
         return false;
     }
@@ -236,7 +238,7 @@ bool reader::read_row(Args&... args)
         return false;
     }
 
-    return m_row.read(args...);
+    return m_row.read_cols(m_selected_cols, args...);
 }
 
 template <typename... Args>
@@ -248,19 +250,27 @@ bool reader::select_cols(const Args&... args)
     }
 
     std::fill(m_selected_cols.begin(), m_selected_cols.end(), false);
-    return select_cols_impl(args...);
+    const bool cols_selected = select_cols_impl(args...);
+
+    m_selected_cols_num = std::accumulate(m_selected_cols.begin(), m_selected_cols.end(), size_t(0));
+
+    return cols_selected;
 }
 
 template <typename Arg>
 bool reader::select_cols_impl(const Arg& arg)
 {
-    select_next_col(arg);
+    return select_next_col(arg);
 }
 
 template <typename Arg, typename... Args>
 bool reader::select_cols_impl(const Arg& arg, const Args&... args)
 {
-    select_next_col(arg);
+    if (!select_next_col(arg))
+    {
+        return false;
+    }
+
     return select_cols_impl(args...);
 }
 
