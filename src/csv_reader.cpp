@@ -30,142 +30,36 @@ namespace csv
 
 namespace detail
 {
-    struct shard_pos
-    {
-        std::string::size_type begin;
-        std::string::size_type count;
-    };
-
-    std::vector<std::string> split(const std::string& line, char delimiter, const std::vector<size_t>& select_col)
+    std::vector<std::streamoff> get_offsets(const std::string& line, char delimiter)
     {
         const size_t num_shards = std::count(line.begin(), line.end(), delimiter) + 1;
 
-        std::vector<shard_pos> shard_positions(num_shards);
-        std::vector<std::string> shards;
-        shards.reserve(select_col.size());
-
+        std::vector<std::streamoff> stream_offsets(num_shards);
         std::string::size_type begin_idx = -1;
         for (size_t i = 0; i < num_shards; ++i)
         {
             const std::string::size_type end_idx = line.find_first_of(delimiter, begin_idx + 1);
 
-            shard_positions[i].begin = begin_idx + 1;
-            shard_positions[i].count = end_idx - begin_idx - 1;
+            stream_offsets[i] = begin_idx + 1;
 
             begin_idx = end_idx;
         }
 
-        for (const size_t col : select_col)
-        {
-            const auto& pos = shard_positions[col];
-            shards.emplace_back(line.substr(pos.begin, pos.count));
-        }
-
-        return shards;
-    }
-
-    std::vector<std::string> split(const std::string& line, char delimiter)
-    {
-        const size_t num_shards = std::count(line.begin(), line.end(), delimiter) + 1;
-        std::vector<size_t> select_col(num_shards);
-
-        size_t i = 0;
-        std::generate(select_col.begin(), select_col.end(), [&i]() { return i++; } );
-
-        return split(line, delimiter, select_col);
-    }
-
-    bool string_to_value(const std::string& str, char& val)
-    {
-        if (str.size() == 1)
-        {
-            val = str[0];
-            return true;
-        }
-
-        return false;
-    }
-
-    bool string_to_value(const std::string& str, int& val)
-    {
-        char* end = nullptr;
-        const auto tmp_val = std::strtol(str.c_str(), &end, 10);
-        val = static_cast<int>(tmp_val);
-
-        return (end == (str.c_str() + str.length())) && (errno != ERANGE);
-    }
-
-    bool string_to_value(const std::string& str, unsigned int& val)
-    {
-        char* end = nullptr;
-        const auto tmp_val = std::strtoul(str.c_str(), &end, 10);
-        val = static_cast<unsigned int>(tmp_val);
-
-        return (end == (str.c_str() + str.length())) && (errno != ERANGE);
-    }
-
-    bool string_to_value(const std::string& str, long& val)
-    {
-        char* end = nullptr;
-        val = std::strtol(str.c_str(), &end, 10);
-
-        return (end == (str.c_str() + str.length())) && (errno != ERANGE);
-    }
-
-    bool string_to_value(const std::string& str, unsigned long& val)
-    {
-        char* end = nullptr;
-        val = std::strtoul(str.c_str(), &end, 10);
-
-        return (end == (str.c_str() + str.length())) && (errno != ERANGE);
-    }
-
-    bool string_to_value(const std::string& str, long long& val)
-    {
-        char* end = nullptr;
-        val = std::strtoll(str.c_str(), &end, 10);
-
-        return (end == (str.c_str() + str.length())) && (errno != ERANGE);
-    }
-
-    bool string_to_value(const std::string& str, unsigned long long& val)
-    {
-        char* end = nullptr;
-        val = std::strtoull(str.c_str(), &end, 10);
-
-        return (end == (str.c_str() + str.length())) && (errno != ERANGE);
-    }
-
-    bool string_to_value(const std::string& str, float& val)
-    {
-        char* end = nullptr;
-        val = std::strtof(str.c_str(), &end);
-
-        return (end == (str.c_str() + str.length())) && (errno != ERANGE);
-    }
-
-    bool string_to_value(const std::string& str, double& val)
-    {
-        char* end = nullptr;
-        val = std::strtod(str.c_str(), &end);
-
-        return (end == (str.c_str() + str.length())) && (errno != ERANGE);
-    }
-
-    bool string_to_value(const std::string& str, long double& val)
-    {
-        char* end = nullptr;
-        val = std::strtold(str.c_str(), &end);
-
-        return (end == (str.c_str() + str.length())) && (errno != ERANGE);
-    }
-
-    bool string_to_value(const std::string& str, std::string& val)
-    {
-        val = str;
-        return true;
+        return stream_offsets;
     }
 } // namespace detail
+
+void reader::row::parse_line(std::string line, char delimiter)
+{
+    m_line = std::move(line);
+    m_column_offsets = detail::get_offsets(m_line, delimiter);
+
+    std::replace(m_line.begin(), m_line.end(), delimiter, '\n');
+    m_line_stream.str(m_line);
+
+    m_default_selected_cols.resize(m_column_offsets.size());
+    std::fill(m_default_selected_cols.begin(), m_default_selected_cols.end(), true);
+}
 
 reader::reader()
     : m_delimiter(',')
@@ -185,7 +79,6 @@ bool reader::next_row()
     return parse_next_line();
 }
 
-
 size_t reader::get_column_index(const char* name) const
 {
     const auto it = std::find(m_column_names.begin(), m_column_names.end(), name);
@@ -201,13 +94,22 @@ bool reader::select_cols(const std::vector<std::string>& selected_cols)
         return false;
     }
 
-    return std::all_of(
+    std::fill(m_selected_cols.begin(), m_selected_cols.end(), false);
+
+    const bool cols_selected = std::all_of(
             selected_cols.begin(),
             selected_cols.end(),
             [this](const std::string& col) { return select_next_col(col); });
+
+    if (!cols_selected)
+    {
+        std::fill(m_selected_cols.begin(), m_selected_cols.end(), true);
+    }
+
+    return cols_selected;
 }
 
-bool reader::select_cols(std::vector<size_t> selected_cols)
+bool reader::select_cols(const std::vector<size_t>& selected_cols)
 {
     if (!is_open())
     {
@@ -221,35 +123,29 @@ bool reader::select_cols(std::vector<size_t> selected_cols)
 
     if (indexes_in_range)
     {
-        m_selected_cols = std::move(selected_cols);
+        std::fill(m_selected_cols.begin(), m_selected_cols.end(), false);
+        for (auto idx : selected_cols)
+        {
+            m_selected_cols[idx] = true;
+        }
     }
 
     return indexes_in_range;
 }
 
-bool reader::select_cols(const std::vector<bool>& selected_cols)
+bool reader::select_cols(std::vector<bool> selected_cols)
 {
     if (!is_open())
     {
         return false;
     }
 
-    if (selected_cols.size() > m_column_names.size())
+    if (selected_cols.size() != m_column_names.size())
     {
         return false;
     }
 
-    m_selected_cols.clear();
-    m_selected_cols.reserve(m_column_names.size());
-
-    for (size_t i = 0; i < selected_cols.size(); ++i)
-    {
-        if (selected_cols[i])
-        {
-            m_selected_cols.emplace_back(i);
-        }
-    }
-
+    m_selected_cols = std::move(selected_cols);
     return true;
 }
 
@@ -258,7 +154,16 @@ bool reader::read_header()
     std::string header;
     if (std::getline(m_filestream, header))
     {
-        m_column_names = detail::split(header, m_delimiter);
+        const auto num_cols = std::count(header.begin(), header.end(), m_delimiter) + 1;
+        m_column_names.resize(num_cols);
+
+        std::replace(header.begin(), header.end(), m_delimiter, '\n');
+        std::stringstream line_stream(header);
+
+        for (size_t i = 0; line_stream >> m_column_names[i]; ++i) {}
+
+        m_selected_cols.resize(num_cols);
+        std::fill(m_selected_cols.begin(), m_selected_cols.end(), true);
         return true;
     }
 
@@ -270,19 +175,11 @@ bool reader::parse_next_line()
     std::string line;
     if (std::getline(m_filestream, line))
     {
-        m_row.parse_line(line, m_delimiter, m_selected_cols);
+        m_row.parse_line(std::move(line), m_delimiter);
         return true;
     }
 
     return false;
-}
-
-void reader::row::parse_line(
-    const std::string& line,
-    char delimiter,
-    const std::vector<size_t>& selected_cols)
-{
-    m_column_values = detail::split(line, delimiter, selected_cols);
 }
 
 } // namespace csv
