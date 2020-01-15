@@ -22,6 +22,7 @@
  * SOFTWARE.
  */
 #include "csv_writer.h"
+#include <string>
 
 namespace csv
 {
