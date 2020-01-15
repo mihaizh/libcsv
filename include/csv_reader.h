@@ -63,6 +63,11 @@ public:
         template <typename Arg>
         Arg get(size_t index) const;
 
+        size_t size() const
+        {
+            return m_column_offsets.size();
+        }
+
     private:
         template <typename Arg>
         bool read_impl(const std::vector<bool>& cols, size_t idx, Arg& arg) const;
