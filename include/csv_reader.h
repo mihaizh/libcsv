@@ -56,24 +56,24 @@ public:
         void parse_line(std::string line, char delimiter);
 
         template <typename... Args>
-        bool read(Args&... args);
+        bool read(Args&... args) const;
 
         template <typename... Args>
-        bool read_cols(const std::vector<bool>& cols, Args&... args);
+        bool read_cols(const std::vector<bool>& cols, Args&... args) const;
 
         template <typename Arg>
-        Arg get(size_t index);
+        Arg get(size_t index) const;
 
     private:
         template <typename Arg>
-        bool read_impl(const std::vector<bool>& cols, size_t idx, Arg& arg);
+        bool read_impl(const std::vector<bool>& cols, size_t idx, Arg& arg) const;
         template <typename Arg, typename... Args>
-        bool read_impl(const std::vector<bool>& cols, size_t idx, Arg& arg, Args&... args);
+        bool read_impl(const std::vector<bool>& cols, size_t idx, Arg& arg, Args&... args) const;
         template <typename Arg>
-        bool read_next_col(const std::vector<bool>& cols, size_t& idx, Arg& arg);
+        bool read_next_col(const std::vector<bool>& cols, size_t& idx, Arg& arg) const;
 
         std::string m_line;
-        std::stringstream m_line_stream;
+        mutable std::stringstream m_line_stream;
 
         std::vector<std::streamoff> m_column_offsets;
         std::vector<bool> m_default_selected_cols;
@@ -154,13 +154,13 @@ private:
 };
 
 template <typename... Args>
-bool reader::row::read(Args&... args)
+bool reader::row::read(Args&... args) const
 {
     return read_cols(m_default_selected_cols, args...);
 }
 
 template <typename... Args>
-bool reader::row::read_cols(const std::vector<bool>& cols, Args&... args)
+bool reader::row::read_cols(const std::vector<bool>& cols, Args&... args) const
 {
     if (sizeof...(args) > m_column_offsets.size())
     {
@@ -177,13 +177,13 @@ bool reader::row::read_cols(const std::vector<bool>& cols, Args&... args)
 }
 
 template <typename Arg>
-bool reader::row::read_impl(const std::vector<bool>& cols, size_t idx, Arg& arg)
+bool reader::row::read_impl(const std::vector<bool>& cols, size_t idx, Arg& arg) const
 {
     return read_next_col(cols, idx, arg);
 }
 
 template <typename Arg, typename... Args>
-bool reader::row::read_impl(const std::vector<bool>& cols, size_t idx, Arg& arg, Args&... args)
+bool reader::row::read_impl(const std::vector<bool>& cols, size_t idx, Arg& arg, Args&... args) const
 {
     if (read_next_col(cols, idx, arg))
     {
@@ -194,7 +194,7 @@ bool reader::row::read_impl(const std::vector<bool>& cols, size_t idx, Arg& arg,
 }
 
 template <typename Arg>
-bool reader::row::read_next_col(const std::vector<bool>& cols, size_t& idx, Arg& arg)
+bool reader::row::read_next_col(const std::vector<bool>& cols, size_t& idx, Arg& arg) const
 {
     while ((idx < cols.size()) && !cols[idx])
     {
@@ -212,7 +212,7 @@ bool reader::row::read_next_col(const std::vector<bool>& cols, size_t& idx, Arg&
 }
 
 template <typename Arg>
-Arg reader::row::get(size_t index)
+Arg reader::row::get(size_t index) const
 {
     assert(index < m_column_offsets.size());
     Arg val;
