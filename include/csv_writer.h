@@ -90,6 +90,11 @@ public:
         return m_delimiter;
     }
 
+    const std::vector<std::string>& get_column_names()
+    {
+        return m_column_names;
+    }
+
     template <typename... Args>
     void set_column_names(const Args&... args);
     void set_column_names(std::vector<std::string> column_names)
