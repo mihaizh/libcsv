@@ -27,6 +27,23 @@
 namespace csv
 {
 
+writer::row::row(std::ofstream& filestream)
+    : m_filestream(filestream)
+{
+}
+
+writer::row::~row()
+{
+    flush();
+}
+
+void writer::row::flush()
+{
+    m_filestream.get().seekp(m_filestream.get().tellp() - 1);
+    m_filestream.get() << '\n';
+    m_actual_columns = 0;
+}
+
 writer::writer()
     : m_delimiter(','),
       m_header_written(false)
@@ -57,6 +74,16 @@ void writer::write_header()
     }
     m_filestream << std::endl;
     m_header_written = true;
+}
+
+writer::row writer::new_row()
+{
+    if (!m_header_written)
+    {
+        write_header();
+    }
+
+    return row(m_filestream);
 }
 
 } // namespace csv

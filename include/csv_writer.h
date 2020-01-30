@@ -27,6 +27,7 @@
 
 #include <fstream>
 #include <vector>
+#include <functional>
 
 namespace csv
 {
@@ -34,6 +35,38 @@ namespace csv
 class writer
 {
 public:
+    class row
+    {
+    public:
+        explicit row(std::ofstream& filestream);
+        row(const row&) = delete;
+        row(row&&) = default;
+        row& operator=(const row&) = delete;
+        row& operator=(row&&) = default;
+        ~row();
+
+        size_t get_columns() const
+        {
+            return m_actual_columns;
+        }
+
+        template <typename Arg>
+        void write_column(const Arg& arg);
+        template <typename Arg, typename... Args>
+        void write_columns(const Arg& arg, const Args&... args);
+
+        void flush();
+
+    private:
+        template <typename Arg>
+        void write_columns(const Arg& arg);
+
+        std::reference_wrapper<std::ofstream> m_filestream;
+        size_t m_actual_columns = 0;
+
+        friend class writer;
+    };
+
     writer();
     writer(const writer&) = delete;
     writer(writer&&) = default;
@@ -66,6 +99,7 @@ public:
 
     template <typename... Args>
     bool write_row(const Args&... args);
+    row new_row();
 
 private:
     template <typename Arg>
@@ -86,6 +120,27 @@ private:
     bool m_header_written;
     std::vector<std::string> m_column_names;
 };
+
+template <typename Arg>
+void writer::row::write_column(const Arg& arg)
+{
+    write_columns(arg);
+}
+
+template <typename Arg, typename... Args>
+void writer::row::write_columns(const Arg& arg, const Args&... args)
+{
+    write_columns(arg);
+    write_columns(args...);
+}
+
+template <typename Arg>
+void writer::row::write_columns(const Arg &arg)
+{
+    m_filestream.get() << arg << ',';
+    ++m_actual_columns;
+}
+
 
 template <typename... Args>
 void writer::set_column_names(const Args&... args)
