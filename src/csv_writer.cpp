@@ -56,6 +56,7 @@ void writer::write_header()
         m_filestream << ',' << m_column_names[i];
     }
     m_filestream << std::endl;
+    m_header_written = true;
 }
 
 } // namespace csv
