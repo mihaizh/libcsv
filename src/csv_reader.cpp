@@ -51,10 +51,26 @@ namespace detail
 void reader::row::parse_line(std::string line, char delimiter)
 {
     m_line = std::move(line);
+    parse_line_impl(delimiter);
+}
+
+bool reader::row::parse_line(std::ifstream& filestream, char delimiter)
+{
+    if (std::getline(filestream, m_line))
+    {
+        parse_line_impl(delimiter);
+        return true;
+    }
+
+    return false;
+}
+
+void reader::row::parse_line_impl(char delimiter)
+{
     m_column_offsets = detail::get_offsets(m_line, delimiter);
 
     std::replace(m_line.begin(), m_line.end(), delimiter, '\n');
-    m_line_stream.str(m_line);
+    m_line_stream.rdbuf()->pubsetbuf(&m_line[0], m_line.length());
 
     m_default_selected_cols.resize(m_column_offsets.size());
     std::fill(m_default_selected_cols.begin(), m_default_selected_cols.end(), true);
@@ -161,7 +177,7 @@ bool reader::read_header()
         m_column_names.resize(num_cols);
 
         std::replace(header.begin(), header.end(), m_delimiter, '\n');
-        std::stringstream line_stream(header);
+        std::istringstream line_stream(header);
 
         for (size_t i = 0; line_stream >> m_column_names[i]; ++i) {}
 
@@ -176,14 +192,7 @@ bool reader::read_header()
 
 bool reader::parse_next_line()
 {
-    std::string line;
-    if (std::getline(m_filestream, line))
-    {
-        m_row.parse_line(std::move(line), m_delimiter);
-        return true;
-    }
-
-    return false;
+    return m_row.parse_line(m_filestream, m_delimiter);
 }
 
 } // namespace csv

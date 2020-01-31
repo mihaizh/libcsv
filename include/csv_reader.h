@@ -52,7 +52,8 @@ public:
         row& operator=(row&&) = default;
         ~row() = default;
 
-        void parse_line(std::string line, char delimiter);
+        void parse_line(std::string line, char delimiter = ',');
+        bool parse_line(std::ifstream& filestream, char delimiter = ',');
 
         template <typename... Args>
         bool read(Args&... args) const;
@@ -62,13 +63,22 @@ public:
 
         template <typename Arg>
         Arg get(size_t index) const;
+        template <typename Arg>
+        bool get(size_t index, Arg& arg) const;
 
         size_t size() const
         {
             return m_column_offsets.size();
         }
 
+        const std::string& get_line()
+        {
+            return m_line;
+        }
+
     private:
+        void parse_line_impl(char delimiter);
+
         template <typename Arg>
         bool read_impl(const std::vector<bool>& cols, size_t idx, Arg& arg) const;
         template <typename Arg, typename... Args>
@@ -77,7 +87,7 @@ public:
         bool read_next_col(const std::vector<bool>& cols, size_t& idx, Arg& arg) const;
 
         std::string m_line;
-        mutable std::stringstream m_line_stream;
+        mutable std::istringstream m_line_stream;
 
         std::vector<std::streamoff> m_column_offsets;
         std::vector<bool> m_default_selected_cols;
@@ -218,11 +228,23 @@ bool reader::row::read_next_col(const std::vector<bool>& cols, size_t& idx, Arg&
 template <typename Arg>
 Arg reader::row::get(size_t index) const
 {
-    assert(index < m_column_offsets.size());
     Arg val;
-    m_line_stream.seekg(m_column_offsets[index]);
-    m_line_stream >> val;
+    assert(get(index, val));
+
     return val;
+}
+
+template <typename Arg>
+bool reader::row::get(size_t index, Arg& arg) const
+{
+    if (index < m_column_offsets.size())
+    {
+        m_line_stream.seekg(m_column_offsets[index]);
+        m_line_stream >> arg;
+        return true;
+    }
+
+    return false;
 }
 
 template <typename... Args>
