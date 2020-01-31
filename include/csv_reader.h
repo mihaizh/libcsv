@@ -229,7 +229,8 @@ template <typename Arg>
 Arg reader::row::get(size_t index) const
 {
     Arg val;
-    assert(get(index, val));
+    const bool ret = get(index, val);
+    assert(ret);
 
     return val;
 }
