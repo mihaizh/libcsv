@@ -61,6 +61,7 @@ bool writer::open(const char* filename, char delimiter)
     m_delimiter = delimiter;
 
     m_filestream.open(filename);
+    m_filestream.imbue(std::locale{ "en_US.UTF8" });
 
     return is_open();
 }

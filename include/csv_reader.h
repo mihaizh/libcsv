@@ -45,7 +45,7 @@ public:
     class row
     {
     public:
-        row() = default;
+        row();
         row(const row&) = delete;
         row(row&&) = default;
         row& operator=(const row&) = delete;

@@ -48,6 +48,11 @@ namespace detail
     }
 } // namespace detail
 
+reader::row::row()
+{
+    m_line_stream.imbue(std::locale{ "en_US.UTF8" });
+}
+
 void reader::row::parse_line(std::string line, char delimiter)
 {
     m_line = std::move(line);
@@ -85,6 +90,8 @@ reader::reader()
 bool reader::open(const char* filename, char delimiter)
 {
     m_filestream.open(filename);
+    m_filestream.imbue(std::locale{ "en_US.UTF8" });
+
     m_delimiter = delimiter;
 
     return is_open() && read_header() && select_cols(m_column_names);
