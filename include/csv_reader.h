@@ -46,9 +46,9 @@ public:
     {
     public:
         row();
-        row(const row&) = delete;
+        row(const row&) = default;
         row(row&&) = default;
-        row& operator=(const row&) = delete;
+        row& operator=(const row&) = default;
         row& operator=(row&&) = default;
         ~row() = default;
 
