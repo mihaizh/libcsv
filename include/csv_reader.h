@@ -59,7 +59,7 @@ public:
         bool read(Args&... args) const;
 
         template <typename... Args>
-        bool read_cols(const std::vector<bool>& cols, Args&... args) const;
+        bool read_columns(const std::vector<bool>& cols, Args&... args) const;
 
         template <typename Arg>
         Arg get(size_t index) const;
@@ -174,7 +174,7 @@ bool reader::row::read(Args&... args) const
 }
 
 template <typename... Args>
-bool reader::row::read_cols(const std::vector<bool>& cols, Args&... args) const
+bool reader::row::read_columns(const std::vector<bool>& cols, Args&... args) const
 {
     if (sizeof...(args) > m_column_offsets.size())
     {
