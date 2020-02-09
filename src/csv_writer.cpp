@@ -39,7 +39,9 @@ writer::row::~row()
 
 void writer::row::flush()
 {
-    m_filestream.get().seekp(m_filestream.get().tellp() - std::streamoff(1));
+    const std::streamoff offset = (m_actual_columns > 0);
+    m_filestream.get().seekp(m_filestream.get().tellp() - offset);
+
     m_filestream.get() << '\n';
     m_actual_columns = 0;
 }
