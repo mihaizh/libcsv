@@ -75,6 +75,7 @@ void reader::row::parse_line_impl(char delimiter)
     m_column_offsets = detail::get_offsets(m_line, delimiter);
 
     std::replace(m_line.begin(), m_line.end(), delimiter, '\n');
+    m_line_stream.clear();
     m_line_stream.str(m_line);
 
     m_default_selected_cols.resize(m_column_offsets.size());
