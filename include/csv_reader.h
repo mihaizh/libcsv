@@ -242,6 +242,7 @@ bool reader::row::get(size_t index, Arg& arg) const
     {
         m_line_stream.seekg(m_column_offsets[index]);
         m_line_stream >> arg;
+        m_line_stream.clear();
         return true;
     }
 
