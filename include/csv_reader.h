@@ -266,7 +266,7 @@ bool reader::read_row(Args&... args)
         return false;
     }
 
-    return m_row.read_cols(m_selected_cols, args...);
+    return m_row.read_columns(m_selected_cols, args...);
 }
 
 template <typename... Args>
